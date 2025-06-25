@@ -1,0 +1,229 @@
+name: Deploy AWS-CF Resources
+
+on:
+  push: 
+    branches: ["develop", "prod", "pase-prod"]
+  pull_request: 
+    branches: ["develop"]
+
+jobs:
+  unit-test-python-lambda-orchestration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    strategy:
+      matrix:
+        python: ["3.8"]
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install packages
+        run: pip3 install tox
+      - name: Run tox
+        # Run tox using the version of Python in `PATH`
+        working-directory: lambda/code/src/apps/
+        run: tox
+
+  environment_definition:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure environment
+        id: configure_environment
+        run: |
+          if [[ $GITHUB_REF == 'refs/heads/prod' ]]; then
+              echo "env_name=prod" >> $GITHUB_OUTPUT
+          else
+              echo "env_name=develop" >> $GITHUB_OUTPUT
+          fi
+    outputs:
+      environment_name: ${{ steps.configure_environment.outputs.env_name }}
+
+
+  Deploy-CloudFormation-Infra:
+    needs: [unit-test-python-lambda-orchestration, environment_definition]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.environment_definition.outputs.environment_name }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Print environment
+      run: |
+        echo "Environmet formed: ${{ needs.environment_definition.outputs.environment_name }}"
+    - name: List files in the repositoryz
+      run: |
+        ls ${{ github.workspace }}
+    - name: Configure AWS credentials
+      id: creds
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+
+    - name: Deploy Amazon CloudFormation base Stack
+      id: CF0
+      uses: aws-actions/aws-cloudformation-github-deploy@master
+      with:
+        name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-base-resources
+        template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-base-deploy.yaml
+        no-fail-on-empty-changeset: "1"
+        capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+        parameter-overrides: "file://${{ github.workspace }}/cloudformation/params-${{ vars.ENV }}/parameters_base.json"
+
+    - name: Zip code and upload to s3 artifacts bucket
+      id: load-artifactos-to-s3
+      run: |
+        pwd
+        ls
+        export ARTIFACTS_BUCKET='${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-s3-artifacts'
+        cd lambda/code/src/apps/
+        zip -r orchestration_lambda_v2.zip main_orchestration.py
+        aws s3 cp orchestration_lambda_v2.zip s3://$ARTIFACTS_BUCKET/infra/utilities/lambda/ --acl bucket-owner-full-control
+
+    - name: Charge variables for dms
+      id: charge-db-credentials-dms
+      working-directory: cloudformation
+      run: |
+        USER=${{ secrets.DMS_USER_SQL_SERVER }}
+        PASS=${{ secrets.DMS_PASSWORD_SQL_SERVER }}
+        IP=${{ secrets.DMS_IP_SQL_SERVER }}
+        VPC=${{ secrets.DMS_VPC_ID }}
+        SUBNETS="${{ secrets.DMS_SUBNETS_ID }}"
+        jq --arg USER "$USER" --arg PASS "$PASS" --arg IP "$IP" --arg VPC "$VPC" --arg SUBNETS "$SUBNETS" \
+        '. |= map(if .ParameterKey == "SrcDbUsername" then .ParameterValue = $USER
+              elif .ParameterKey == "SrcDbPassword" then .ParameterValue = $PASS
+              elif .ParameterKey == "SrcDbServerName" then .ParameterValue = $IP
+              elif .ParameterKey == "GeneralVPCId" then .ParameterValue = $VPC
+              elif .ParameterKey == "SubnetIdsDMS" then .ParameterValue = $SUBNETS
+              else . end)' \
+        params-${{ vars.ENV }}/parameters.json > updated_params_infra.json
+        cat updated_params_infra.json
+
+    - name: Deploy Amazon CloudFormation Stack
+      id: CF
+      uses: aws-actions/aws-cloudformation-github-deploy@master
+      with:
+        name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-resources-infra
+        template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-deploy.yaml
+        no-fail-on-empty-changeset: "1"
+        capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+        parameter-overrides: "file://${{ github.workspace }}/cloudformation/updated_params_infra.json"
+
+    - name: Deploy DMS Tasks Amazon CloudFormation Stack template
+      id: CF2
+      uses: aws-actions/aws-cloudformation-github-deploy@master
+      with:
+        name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-resources-infra-dms-tasks
+        template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-dms-task-deploy.yaml
+        no-fail-on-empty-changeset: "1"
+        capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+        parameter-overrides: "file://${{ github.workspace }}/cloudformation/params-${{ vars.ENV }}/parameters_dms_tasks.json"
+
+  lambda-inference:
+    needs: [Deploy-CloudFormation-Infra, environment_definition]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.environment_definition.outputs.environment_name }}
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ["3.8"]
+    env:
+      AWS_REGION: us-east-1
+      REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install packages
+        run: pip3 install tox
+      - name: Run tox
+        working-directory: lambda/code/src/apps/inference_orchestration
+        run: tox
+
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_DEFAULT_REGION }}
+
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Naming docker image [inference-lambda]
+        id: naming-docker-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-ecr-repo-inference-lambda-artifacts
+          IMAGE_TAG: standardv.2.02
+          IMAGE_TAG_Quality: quality-rejections.v1.1
+        run: |
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_quality=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG_Quality" >> $GITHUB_OUTPUT
+
+      - name: Build, tag, and push image to Amazon [inference-lambda-artifacts]
+        id: build-image-inference-lambda-artifacts
+        if: true
+        run: |
+          cd lambda/code/src/apps/inference_orchestration
+          docker build -t ${{ steps.naming-docker-image.outputs.image }} .
+          docker push ${{ steps.naming-docker-image.outputs.image }}
+          docker build -t ${{ steps.naming-docker-image.outputs.image_quality }} -f Dockerfile-calidad .
+          docker push ${{ steps.naming-docker-image.outputs.image_quality }}
+          cd ../../../../..
+
+      - name: Prepare params for CloudFormation Stack Inference lambda
+        id: ParamsForCFIInferenceLambda
+        run: |
+          cd cloudformation/params-${{ vars.ENV }}/
+          params=$(cat parameters_inference_lambda.json | jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' | tr '\n' ',' | sed 's/,$//')
+          param_image_code_uri="ImageCodeUri=${{ steps.naming-docker-image.outputs.image }}"
+          params="$params,$param_image_code_uri"
+          echo "params=$params" >> $GITHUB_OUTPUT
+
+      - name: Deploy Amazon CloudFormation Stack template for Inference lambda
+        id: CFInferenceLambda
+        uses: aws-actions/aws-cloudformation-github-deploy@master
+        with:
+          name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-resources-inference-lambda
+          template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-lambda-inference.yaml
+          no-fail-on-empty-changeset: "1"
+          capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+          parameter-overrides: ${{ steps.ParamsForCFIInferenceLambda.outputs.params }}
+
+      - name: Prepare params for CloudFormation Stack Inference quality lambda
+        id: ParamsForQualityInferenceLambda
+        run: |
+          cd cloudformation/params-${{ vars.ENV }}/
+          params=$(cat parameters_inference_lambda.json | jq -r '.[] | "\(.ParameterKey)=\(.ParameterValue)"' | tr '\n' ',' | sed 's/,$//')
+          param_image_code_uri="ImageCodeUri=${{ steps.naming-docker-image.outputs.image_quality }}"
+          paramsquality="$params,$param_image_code_uri"
+          echo "paramsquality=$paramsquality" >> $GITHUB_OUTPUT
+      
+      - name: Deploy Amazon CloudFormation Stack template for quality Inference lambda
+        id: QualityInferenceLambda
+        uses: aws-actions/aws-cloudformation-github-deploy@master
+        with:
+          name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-resources-inference-lambda-calidad
+          template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-lambda-inference-calidad.yaml
+          no-fail-on-empty-changeset: "1"
+          capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+          parameter-overrides: ${{ steps.ParamsForQualityInferenceLambda.outputs.paramsquality }}
+
+      - name: Deploy Stack for AWS CloudFormation template for Inference results tables
+        id: CFInferenceResultsTables
+        uses: aws-actions/aws-cloudformation-github-deploy@master
+        with:
+          name:  ${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-${{ vars.ENV }}-infra-resources-inference-results-tables
+          template: cloudformation/${{ vars.COMPANY_NAME }}-${{ vars.PROJECT_NAME }}-infra-inference-results-tables.yaml
+          no-fail-on-empty-changeset: "1"
+          capabilities: CAPABILITY_IAM,CAPABILITY_NAMED_IAM
+          parameter-overrides: "file://${{ github.workspace }}/cloudformation/params-${{ vars.ENV }}/parameters_inference_results_tables.json"
