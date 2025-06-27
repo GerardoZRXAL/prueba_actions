@@ -1,0 +1,91 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "LogPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "logs:GetLogDelivery",
+        "logs:ListLogDeliveries",
+        "logs:DeleteLogDelivery",
+        "logs:DescribeResourcePolicies",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogDelivery",
+        "logs:PutResourcePolicy",
+        "logs:UpdateLogDelivery",
+        "logs: PutRetentionPolicy",
+        "cloudwatch:PutMetricData"
+      ],
+      "Resource": "arn:aws:logs:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:log-group:${VAR_REPLACE_project}*"
+    },
+    {
+      "Sid": "IamPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "iam:ListRolePolicies",
+        "iam:GetRole",
+        "iam:GetRolePolicy"
+      ],
+      "Resource": [
+        "arn:aws:iam::${VAR_REPLACE_aws_account}:policy/${VAR_REPLACE_project}-iam*",
+        "arn:aws:iam::${VAR_REPLACE_aws_account}:role/${VAR_REPLACE_project}-iam*"
+      ]
+    },
+    {
+      "Sid": "StepFunctionPolicy",
+      "Effect": "Allow",
+      "Action": [
+        "states:ListStateMachines",
+        "states:ListStateMachineVersions",
+        "states:StartExecution",
+        "states:TagResource",
+        "states:StopExecution",
+        "states:DescribeExecution",
+        "states:DescribeStateMachine",
+        "states:UpdateStateMachine"
+      ],
+      "Resource": [
+        "arn:aws:states:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:stateMachine:${VAR_REPLACE_project}-*",
+        "arn:aws:states:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:execution:${VAR_REPLACE_project}-*"
+      ]
+    },
+    {
+      "Sid": "sns",
+      "Effect": "Allow",
+      "Action": [
+        "SNS:Publish"
+      ],
+      "Resource": "arn:aws:sns:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:${VAR_REPLACE_project}-sns*"
+    },
+    {
+      "Sid": "glue",
+      "Effect": "Allow",
+      "Action": [
+        "glue:StartJobRun",
+        "glue:BatchStopJobRun",
+        "glue:GetJob",
+        "glue:GetJobRuns",
+        "glue:GetJobRun",
+        "glue:BatchGetJobs"
+      ],
+      "Resource": [
+        "arn:aws:glue:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:job/${VAR_REPLACE_project}-glue*",
+        "arn:aws:glue:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:job/*"
+      ]
+    },
+    {
+      "Sid": "kms",
+      "Effect": "Allow",
+      "Action": [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ],
+      "Resource": [
+        "arn:aws:kms:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:key/*"
+      ]
+    }
+  ]
+}

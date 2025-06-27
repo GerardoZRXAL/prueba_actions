@@ -1,0 +1,14 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "states:StartExecution"
+            ],
+            "Resource": [
+                "arn:aws:states:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:stateMachine:${VAR_REPLACE_project}-sf*"
+            ]
+        }
+    ]
+}

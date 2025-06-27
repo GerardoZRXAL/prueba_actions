@@ -1,0 +1,97 @@
+{
+  "Comment": "This state machine orchestrates",
+  "StartAt": "GlobalVariables",
+  "States": {
+    "GlobalVariables": {
+      "Type": "Pass",
+      "Parameters": {
+        "snsARN": "${VAR_REPLACE_sns_arn_topic}",
+        "job_transformation": "ftc-glue-dlk-odata-vbrp-compaction-dev",
+        "job_extraction": "TEST1",
+        "env": "${VAR_REPLACE_environment}",
+        "tableNameProcess": "table_vbrp",
+        "tableNameNotificationProcess": "table_vbrp"
+      },
+      "ResultPath": "$",
+      "Next": "ExecuteJobIngesta"
+    },
+    "ExecuteJobIngesta": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName.$": "$.job_extraction"
+      },
+      "ResultPath": "$.joblistfiles",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.Error",
+          "Next": "SNSFailedExtractionJobError"
+        }
+      ],
+      "Next": "ExecuteJobTransformation"
+    },
+    "ExecuteJobTransformation": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName.$": "$.job_transformation"
+      },
+      "ResultPath": "$.joblistfiles",
+      "Retry": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "IntervalSeconds": 10,
+          "BackoffRate": 2,
+          "MaxAttempts": 2
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "ResultPath": "$.Error",
+          "Next": "SNSFailedTransformationJobError"
+        }
+      ],
+      "Next": "SuccessState"
+    },
+    "SuccessState": {
+      "Type": "Succeed"
+    },
+    "SNSFailedTransformationJobError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn.$": "$.snsARN",
+        "Message.$": "States.Format('Se produjo un error al intentar ejecutar EL Glue Job {} encargado de realizar la generación de la tabla: {}, debido al siguiente ERROR: {}\nPosibles pasos para resolver el error:\n1. Revisar los registros de ejecución de la Step Function en la cuenta Analytics Datamesh, llamada: {}, para identificar posibles fallas.\n2. Determinar la causa raíz del error en base a los mensajes de error en los logs de la Step Function ejecutada.\n3. Determinar la causa raíz del error en base a los mensajes de error generados por el Glue Job. En este punto el error ocurre por un fallo en la ejecución del Glue Job en la cuenta Analytics Datamesh.\nPara reejecutar el proceso seguir los siguiente pasos:\n1. Ingresar al servicio de Step Function en la ceunta Analytics Datamesh y seleccionar la Step Function que se ejecutó con error.\n2. Ejecutar nuevamente la Step Function de forma manual (no es necesesario especificar parametros en la ejecución) y monitorear la ejecución para verificar que se complete sin errores.', $.job_transformation, $.tableNameProcess, $.Error.Cause, $$.StateMachine.Name)",
+        "Subject.$": "States.Format('FORTACERO - EJECUCION DE TRANSFORMACION TBL {} FALLO EN ENVIRONMENT {}', $.tableNameProcess, $.env)"
+      },
+      "ResultPath": null,
+      "Next": "FailureState"
+    },
+    "SNSFailedExtractionJobError": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "TopicArn.$": "$.snsARN",
+        "Message.$": "States.Format('Se produjo un error al intentar ejecutar EL Glue Job {}, encargado de realizar la extraccion desde SAP ODATA, debido al siguiente ERROR: {}\nPosibles pasos para resolver el error:\n1. Revisar los registros de ejecución de la Step Function en la cuenta, llamada: {}, para identificar posibles fallas.\n2.Determinar la causa raíz del error en base a los mensajes de error en los logs de la Step Function ejecutada.\n3. Determinar la causa raíz del error en base a los mensajes de error generados por el Glue Job. En este punto el error ocurre por un fallo en la ejecución del Glue Job en la cuenta.\nPara reejecutar el proceso seguir los siguiente pasos:\n1. Verificar los logs de ejecucion del Glue job.\n2.Ejecutar nuevamente la máquina de estados de forma manual y monitorear la ejecución para verificar que se complete sin errores.\n3. RECORDAR QUE ESTE GLUE JOB SE EJECUTA CADA HORA', $.job_extraction, $.Error.Cause, $$.StateMachine.Name)",
+        "Subject.$": "States.Format('FORTACERO - PROCESO DE ORQUESTACION PARA {} FALLO EN EL ENVIRONMENT {}', $.tableNameNotificationProcess, $.env)"
+      },
+      "ResultPath": null,
+      "Next": "FailureState"
+    },
+    "FailureState": {
+      "Type": "Fail",
+      "Error": "GlueJobExecutionFailed",
+      "Cause": "The Glue job execution failed"
+    }
+  }
+}

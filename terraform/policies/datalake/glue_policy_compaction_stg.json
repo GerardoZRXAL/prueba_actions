@@ -1,0 +1,146 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Tags",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DeleteTags",
+                "ec2:CreateTags"
+            ],
+            "Resource": [
+                "arn:aws:ec2:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:security-group/*",
+                "arn:aws:ec2:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:instance/*",
+                "arn:aws:ec2:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:network-interface/*"
+            ]
+        },
+        {
+            "Sid": "S3ListAll",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:ListAllMyBuckets",
+                "s3:GetBucketLocation",
+                "s3:GetBucketAcl",
+                "s3:GetBucketOwnershipControls",
+                "s3:GetBucketPublicAccessBlock",
+                "s3:GetBucketPolicy",
+                "s3:ListBucketMultipartUploads"
+            ],
+            "Resource": [
+                "arn:aws:s3:::fortacero-s3-staging-useast1-${VAR_REPLACE_environment}",
+                "arn:aws:s3:::dlk-fortacero-prod-s3-landing",
+                "arn:aws:s3:::fortacero-s3-artifacts-useast1-dev"
+            ]
+        },
+        {
+            "Sid": "GetRAWS3",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject",
+                "s3:ListMultipartUploadParts",
+                "s3:AbortMultipartUpload"
+            ],
+            "Resource": [
+                "arn:aws:s3:::dlk-fortacero-prod-s3-landing/*"
+            ]
+        },
+        {
+            "Sid": "GlueJobSZ",
+            "Effect": "Allow",
+            "Action": [
+                "s3:DeleteObject",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListMultipartUploadParts",
+                "s3:ListObjectsV2",
+                "s3:AbortMultipartUpload",
+                "s3:PutObjectAcl",
+                "s3:*Object*"
+            ],
+            "Resource": [
+                "arn:aws:s3:::fortacero-s3-staging-useast1-${VAR_REPLACE_environment}/*"
+            ]
+        },
+        {
+            "Sid": "artifactsS3",
+            "Effect": "Allow",
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::fortacero-s3-artifacts-useast1-${VAR_REPLACE_environment}/glue_metadata_tbl_definition/${VAR_REPLACE_subproject}/*",
+                "arn:aws:s3:::fortacero-s3-artifacts-useast1-${VAR_REPLACE_environment}/xlsx_mapping_framework_cast/${VAR_REPLACE_subproject}/*",
+                "arn:aws:s3:::fortacero-s3-artifacts-useast1-${VAR_REPLACE_environment}/glue/*"
+            ]
+        },
+        {
+            "Sid": "DynamoDB",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:ListTables",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:DescribeTable",
+                "dynamodb:Scan",
+                "dynamodb:GetItem",
+                "dynamodb:Query"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:table/${VAR_REPLACE_project}-dynamo-${VAR_REPLACE_subproject}-compaction-config-${VAR_REPLACE_environment}",
+                "arn:aws:dynamodb:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:table/${VAR_REPLACE_project}-dynamo-${VAR_REPLACE_subproject}-update-metadata-config-${VAR_REPLACE_environment}"
+            ]
+        },
+        {
+            "Sid": "IAM",
+            "Effect": "Allow",
+            "Action": [
+                "iam:GetRole",
+                "iam:GetRolePolicy",
+                "iam:ListRolePolicies"
+            ],
+            "Resource": [
+                "arn:aws:iam::${VAR_REPLACE_aws_account}:role/${VAR_REPLACE_project}-iam-${VAR_REPLACE_subproject}*"
+            ]
+        },
+        {
+            "Sid": "GlueGeneral",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DeleteNetworkInterface",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeSecurityGroups",
+                "ec2:CreateNetworkInterface",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeVpcEndpoints",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeRouteTables",
+                "glue:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "GlueLogsGeneral",
+            "Effect": "Allow",
+            "Action": [
+                "cloudwatch:PutMetricData",
+                "logs:CreateLogGroup",
+                "logs:PutLogEvents",
+                "logs:CreateLogStream",
+                "logs:DescribeLogStreams"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "GlueKMS",
+            "Effect": "Allow",
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:ReEncrypt*",
+                "kms:GenerateDataKey*",
+                "kms:DescribeKey"
+            ],
+            "Resource": "arn:aws:kms:${VAR_REPLACE_region}:${VAR_REPLACE_aws_account}:key/*"
+        }
+    ]
+}
