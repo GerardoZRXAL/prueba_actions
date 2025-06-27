@@ -44,7 +44,7 @@ jobs:
     
      - name: log work dir
        id: logs
-       run: pwd
+       run: echo "$ENVIRONMENT_NAME"
     
      - name: Terraform init
        id: init
