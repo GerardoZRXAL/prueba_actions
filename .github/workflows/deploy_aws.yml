@@ -28,6 +28,9 @@ jobs:
        working-directory: ${{ env.TF_ROOT }}
  
    steps:
+     - name: log work dir
+       id: logs
+       run: echo "$ENVIRONMENT_NAME"
      - name: Checkout the repository to the runner
        uses: actions/checkout@v2
  
@@ -42,9 +45,7 @@ jobs:
           aws-secret-access-key: ${ { secrets.AWS_SECRET_ACCESS_KEY } }
           aws-region: "us-east-1"
     
-     - name: log work dir
-       id: logs
-       run: echo "$ENVIRONMENT_NAME"
+     
     
      - name: Terraform init
        id: init
