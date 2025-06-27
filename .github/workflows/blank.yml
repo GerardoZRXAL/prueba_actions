@@ -28,14 +28,14 @@ jobs:
       - name: Check if prod
         if: endsWith(github.ref, '/main') #if the triggering branch is 'main'
         run: |
-          echo "ENVIRONMENT_NAME=prod" >> $GITHUB_ENV #retrieve secrets from 'prod' environment in Github
+          echo "ENVIRONMENT_NAME=prod" >> $GITHUB_ENV
       - name: Check if dev
-        if: endsWith(github.ref, '/dev') #if the triggering branch is 'dev'
+        if: endsWith(github.ref, '/dev')
         run: |
-          echo "ENVIRONMENT_NAME=dev" >> $GITHUB_ENV #retrieve secrets from 'dev' environment in Github
+          echo "ENVIRONMENT_NAME=dev" >> $GITHUB_ENV
       - name: Set output
         id: set_env
-        run: echo "::set-output name=current_env::${{ env.ENVIRONMENT_NAME }}"
+        run: echo "{current_env}=${{ env.ENVIRONMENT_NAME }}" >> $GITHUB_OUTPUT
 
   terraform:
    name: "Terraform Infrastructure Change Management"
