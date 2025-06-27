@@ -34,7 +34,6 @@ jobs:
           echo "ENVIRONMENT_NAME=dev" >> $GITHUB_ENV
       - name: Set output
         id: set_env
-        #run: echo "::set-output name=current_env::${{ env.ENVIRONMENT_NAME }}"
         run: echo "current_env=${{ env.ENVIRONMENT_NAME }}" >> $GITHUB_OUTPUT
 
   terraform:
@@ -125,7 +124,7 @@ jobs:
        shell: bash
        working-directory: ${{ env.TF_ROOT }}
 
-  steps:
+   steps:
     - name: Checkout the repository to the runner
       uses: actions/checkout@v4
       
