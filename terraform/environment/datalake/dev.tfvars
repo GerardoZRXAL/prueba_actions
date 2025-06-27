@@ -55,19 +55,19 @@ kms_data = {
 # S3
 buckets_data = {
   athena_zone_bucket = {
-    bucket_name       = "fortacero-s3-athena-useast1-dev"
+    bucket_name       = "fortacero-s3-athena-useast1-dev-dasfasdf"
     key_name          = "s3-key"
     s3_versioning     = "Suspended"
     s3_logging_config = false
   },
   common_artifacts_bucket = {
-    bucket_name       = "fortacero-s3-artifacts-useast1-dev"
+    bucket_name       = "fortacero-s3-artifacts-useast1-dev-dasfasdf"
     key_name          = "s3-key"
     s3_versioning     = "Suspended"
     s3_logging_config = false
   },
   staging_zone_bucket = {
-    bucket_name       = "fortacero-s3-staging-useast1-dev"
+    bucket_name       = "fortacero-s3-staging-useast1-dev-dasfasdf"
     key_name          = "s3-key"
     s3_versioning     = "Suspended"
     s3_logging_config = false
