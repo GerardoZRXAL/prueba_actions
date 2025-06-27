@@ -38,7 +38,7 @@ jobs:
 
      - name: log work dir
        id: logs
-       run: echo "${ { secrets.AWS_DEFAULT_REGION } }"
+       run: echo "$AWS_DEFAULT_REGION"
 
      - name: Configure AWS credentials
        uses: aws-actions/configure-aws-credentials@v4
