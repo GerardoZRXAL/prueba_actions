@@ -8,7 +8,7 @@ on:
       - terraform/**
   pull_request:
     branches:
-      - develop
+      - dev
 
 env:
   TF_VERSION: "1.5.7"
