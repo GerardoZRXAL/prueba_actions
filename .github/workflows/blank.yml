@@ -20,13 +20,13 @@ env:
   AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
 jobs:
-  set-environment: #this is a job named 'set-environment'
-    runs-on: ubuntu-latest #your preferred OS
-    outputs: #the env value needs to be exposed as an output in order to be reached from other jobs
-      current_env: ${{ steps.set_env.outputs.current_env }} #output variable to store the relevant environment
+  set-environment: 
+    runs-on: ubuntu-latest
+    outputs: 
+      current_env: ${{ steps.set_env.outputs.current_env }}
     steps:
       - name: Check if prod
-        if: endsWith(github.ref, '/main') #if the triggering branch is 'main'
+        if: endsWith(github.ref, '/main')
         run: |
           echo "ENVIRONMENT_NAME=prod" >> $GITHUB_ENV
       - name: Check if dev
@@ -68,6 +68,8 @@ jobs:
     
      - name: Terraform init
        id: init
+       env:
+        TF_BUCKET_STATE: ${{ vars.TF_BUCKET_STATE }}
        run: terraform init -backend-config="bucket=$TF_BUCKET_STATE"
  
      - name: Terraform format
