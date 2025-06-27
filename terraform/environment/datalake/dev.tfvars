@@ -1,5 +1,5 @@
 # GENERAL VARIABLES
-aws_account      = "807385937126"
+aws_account      = "026891307083"
 region           = "us-east-1"
 project          = "ftc"
 subproject       = "dlk"
