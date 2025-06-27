@@ -17,7 +17,6 @@ env:
   TF_ROOT: ./terraform
   TF_LOG: INFO
   ENVIRONMENT: ${{ github.ref_name == 'main' && 'prod' || 'dev' }}
-  AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
 
 jobs:
   terraform:
@@ -37,10 +36,10 @@ jobs:
        with:
          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-         aws-region: ${{ env.AWS_REGION }}
+         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
  
      - name: Mostrar entorno actual
-       run: echo "Desplegando en el ambiente: $ENVIRONMENT (rama: ${{ github.ref_name }})"
+       run: echo "Desplegando en el ambiente"
 
      - name: Setup Terraform with specified version on the runner
        uses: hashicorp/setup-terraform@v3
