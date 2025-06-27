@@ -86,7 +86,7 @@ jobs:
        shell: bash
        working-directory: ${{ env.TF_ROOT }}
 
-  steps:
+   steps:
     - name: Checkout the repository to the runner
       uses: actions/checkout@v4
       
