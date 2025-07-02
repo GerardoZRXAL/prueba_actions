@@ -76,7 +76,7 @@ buckets_data = {
 }
 
 # ENDPOINT
-route_table_id = ["rtb-0a039dcb2d6b15c11", "rtb-09ebbf9549dc17145"]
+route_table_id = ["rtb-0bd56817787aa1bfc", "rtb-07185ecf0abe2144a"]
 endpoint_configurations = {
   s3-endpoint = {
     endpoin_vpc_id               = "vpc-04b0ce7c7b241a56d"

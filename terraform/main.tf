@@ -18,7 +18,6 @@ terraform {
 
 provider "aws" {
   region = var.region
-
   default_tags {
     tags = {
       Project        = var.project
@@ -48,7 +47,7 @@ module "kms" {
   kms_data         = var.kms_data
 }
 
-# SNS
+# #SNS
 # module "sns" {
 #   source        = "./modules/sns"
 #   project       = var.project
@@ -79,7 +78,7 @@ module "create_bucket" {
 }
 
 
-# NETWORKING
+# #NETWORKING
 # module "vpc_endpoints" {
 #   source                  = "./modules/networking/vpc_endpoints"
 #   aws_account             = var.aws_account
@@ -143,23 +142,23 @@ module "create_bucket" {
 #   depends_on = [module.kms]
 # }
 
-# # # DYNAMODB PUT ITEM
-# # module "dynamo_db_insert_item" {
-# #   source = "./modules/dynamo_db/dynamo_db_insert_item"
+# # DYNAMODB PUT ITEM
+# module "dynamo_db_insert_item" {
+#   source = "./modules/dynamo_db/dynamo_db_insert_item"
 
-# #   aws_account        = var.aws_account
-# #   project            = var.project
-# #   subproject         = var.subproject
-# #   environment        = var.environment
-# #   owner              = var.owner
-# #   createdby          = var.createdby
-# #   region             = var.region
-# #   dynamo_insert_item = var.dynamo_insert_item
+#   aws_account        = var.aws_account
+#   project            = var.project
+#   subproject         = var.subproject
+#   environment        = var.environment
+#   owner              = var.owner
+#   createdby          = var.createdby
+#   region             = var.region
+#   dynamo_insert_item = var.dynamo_insert_item
 
-# #   depends_on = [module.dynamodb]
-# # }
+#   depends_on = [module.dynamodb]
+# }
 
-# # GLUE
+# GLUE
 # module "glue" {
 #   source = "./modules/glue/glue_jobs"
 

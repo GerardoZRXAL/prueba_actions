@@ -23,18 +23,23 @@ jobs:
     runs-on: ubuntu-latest
     outputs: 
       current_env: ${{ steps.set_env.outputs.current_env }}
+      enviroment_tfvars: ""
     steps:
       - name: Check if prod
         if: endsWith(github.ref, '/main')
         run: |
           echo "ENVIRONMENT_NAME=prod" >> $GITHUB_ENV
+          echo "ENV_TFVARS=environment/datalake/prod.tfvars" >> $GITHUB_ENV
       - name: Check if dev
         if: endsWith(github.ref, '/dev')
         run: |
           echo "ENVIRONMENT_NAME=dev" >> $GITHUB_ENV
+          echo "ENV_TFVARS=environment/datalake/dev.tfvars" >> $GITHUB_ENV
       - name: Set output
         id: set_env
-        run: echo "current_env=${{ env.ENVIRONMENT_NAME }}" >> $GITHUB_OUTPUT
+        run: |
+          echo "current_env=${{ env.ENVIRONMENT_NAME }}" >> $GITHUB_OUTPUT
+          echo "enviroment_tfvars=${{ env.ENV_TFVARS }}" >> $GITHUB_OUTPUT
 
   terraform:
    name: "Terraform validation"
@@ -110,8 +115,12 @@ jobs:
 
     - name: Terraform plan
       id: plan
-      run: terraform plan -var-file environment/datalake/dev.tfvars
+      env: 
+        ENV_TFVARS: ${{ needs.set-environment.outputs.enviroment_tfvars }}
+      run: terraform plan -var-file $ENV_TFVARS
 
     - name: Terraform apply
       id: apply
-      run: terraform apply -var-file environment/datalake/dev.tfvars -auto-approve
+      env: 
+        ENV_TFVARS: ${{ needs.set-environment.outputs.enviroment_tfvars }}
+      run: terraform apply -var-file $ENV_TFVARS -auto-approve
