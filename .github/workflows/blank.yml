@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs: 
       current_env: ${{ steps.set_env.outputs.current_env }}
-      enviroment_tfvars: ""
+      enviroment_tfvars: ${{ steps.set_env.outputs.enviroment_tfvars }}
     steps:
       - name: Check if prod
         if: endsWith(github.ref, '/main')
